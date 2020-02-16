@@ -1,4 +1,5 @@
 -- This lib was written by zserge, https://github.com/zserge/lua-promises
+-- Modified for CFC to allow varargs in resolve and reject
 
 --- A+ promises in Lua.
 --- @module deferred
@@ -18,9 +19,9 @@ local function finish(deferred, state)
 	state = state or REJECTED
 	for i, f in ipairs(deferred.queue) do
 		if state == RESOLVED then
-			f:resolve(deferred.value)
+			f:resolve( unpack(deferred.value) )
 		else
-			f:reject(deferred.value)
+			f:reject( unpack(deferred.value) )
 		end
 	end
 	deferred.state = state
@@ -35,21 +36,21 @@ local function isfunction(f)
 end
 
 local function promise(deferred, next, success, failure, nonpromisecb)
-	if type(deferred) == 'table' and type(deferred.value) == 'table' and isfunction(next) then
+	if type(deferred) == 'table' and type(deferred.value[1]) == 'table' and isfunction(next) then
 		local called = false
-		local ok, err = pcall(next, deferred.value, function(v)
+		local ok, err = pcall(next, deferred.value[1], function( ... )
 			if called then return end
 			called = true
-			deferred.value = v
+			deferred.value = { ... }
 			success()
-		end, function(v)
+		end, function( ... )
 			if called then return end
 			called = true
-			deferred.value = v
+			deferred.value = { ... }
 			failure()
 		end)
 		if not ok and not called then
-			deferred.value = err
+			deferred.value = { err }
 			failure()
 		end
 	else
@@ -59,8 +60,8 @@ end
 
 local function fire(deferred)
 	local next
-	if type(deferred.value) == 'table' then
-		next = deferred.value.next
+	if type(deferred.value[1]) == 'table' then
+		next = deferred.value[1].next
 	end
 	promise(deferred, next, function()
 		deferred.state = RESOLVING
@@ -72,9 +73,15 @@ local function fire(deferred)
 		local ok
 		local v
 		if deferred.state == RESOLVING and isfunction(deferred.success) then
-			ok, v = pcall(deferred.success, deferred.value)
+			local ret = { pcall(deferred.success, unpack(deferred.value)) }
+			ok = ret[1]
+			table.remove(ret, 1)
+			v = ret
 		elseif deferred.state == REJECTING and isfunction(deferred.failure) then
-			ok, v = pcall(deferred.failure, deferred.value)
+			local ret = { pcall(deferred.failure, unpack(deferred.value)) }
+			ok = ret[1]
+			table.remove(ret, 1)
+			v = ret
 			if ok then
 				deferred.state = RESOLVING
 			end
@@ -89,8 +96,8 @@ local function fire(deferred)
 			end
 		end
 
-		if deferred.value == deferred then
-			deferred.value = pcall(error, 'resolving promise with itself')
+		if deferred.value[1] == deferred then
+			deferred.value = { pcall(error, 'resolving promise with itself') }
 			return finish(deferred)
 		else
 			promise(deferred, next, function()
@@ -104,9 +111,9 @@ local function fire(deferred)
 	end)
 end
 
-local function resolve(deferred, state, value)
+local function resolve(deferred, state, ...)
 	if deferred.state == 0 then
-		deferred.value = value
+		deferred.value = { ... }
 		deferred.state = state
 		fire(deferred)
 	end
@@ -116,12 +123,12 @@ end
 --
 -- PUBLIC API
 --
-function deferred:resolve(value)
-	return resolve(self, RESOLVING, value)
+function deferred:resolve( ... )
+	return resolve(self, RESOLVING, ...)
 end
 
-function deferred:reject(value)
-	return resolve(self, REJECTING, value)
+function deferred:reject( ... )
+	return resolve(self, REJECTING, ...)
 end
 
 --- Returns a new promise object.
@@ -174,9 +181,9 @@ function M.new(options)
 		next = function(self, success, failure)
 			local next = M.new({success = success, failure = failure, extend = options.extend})
 			if d.state == RESOLVED then
-				next:resolve(d.value)
+				next:resolve( unpack(d.value) )
 			elseif d.state == REJECTED then
-				next:reject(d.value)
+				next:reject( unpack(d.value) )
 			else
 				table.insert(d.queue, next)
 			end
@@ -217,18 +224,29 @@ function M.all(args)
 	local method = "resolve"
 	local pending = #args
 	local results = {}
+	local multi = false
 
 	local function synchronizer(i, resolved)
-		return function(value)
-			results[i] = value
+		return function( ... )
+			local d = { ... }
+			results[i] = d
+			if #d > 1 then
+				multi = true
+			end
+
 			if not resolved then
 				method = "reject"
 			end
 			pending = pending - 1
 			if pending == 0 then
+				if not multi then
+					for k, v in ipairs(results) do
+						results[k] = v[1]
+					end
+				end
 				d[method](d, results)
 			end
-			return value
+			return ...
 		end
 	end
 
@@ -294,10 +312,10 @@ end
 function M.first(args)
 	local d = M.new()
 	for _, v in ipairs(args) do
-		v:next(function(res)
-			d:resolve(res)
-		end, function(err)
-			d:reject(err)
+		v:next(function( ... )
+			d:resolve( ... )
+		end, function( ... )
+			d:reject( ... )
 		end)
 	end
 	return d
