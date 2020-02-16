@@ -1,10 +1,9 @@
 NP.http = {}
 
 -- Returns a promise that resolves after t seconds
-local timeoutId = 0
 local function timeoutPromise( t )
 	local d = promise.new()
-	timer.Create( "timeout" .. timeoutId, t, 1, function()
+	timer.Simple( t, function()
 		d:reject( "Timeout" )
 	end )
 	return d
