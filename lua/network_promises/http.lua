@@ -2,11 +2,11 @@ NP.http = {}
 
 -- Returns a promise that resolves after t seconds
 local function timeoutPromise( t )
-	local d = promise.new()
-	timer.Simple( t, function()
-		d:reject( "Timeout" )
-	end )
-	return d
+    local d = promise.new()
+    timer.Simple( t, function()
+        d:reject( "Timeout" )
+    end )
+    return d
 end
 
 -- http.post as a promise, resolves whenever http finishes, or never if it doesn't (Looking at you, ISteamHTTP)
@@ -14,35 +14,35 @@ end
 -- data   : post args as table
 -- resolves to function( statusCode, data, headers )
 function NP.http.postIndef( url, data )
-	local d = promise.new() -- promise itself
-	http.Post( url, data, function( body, len, headers, status ) 
-		-- Check body is valid Json, if not, reject
-		local data = util.JSONToTable( body )
-		if not data then 
-			d:reject( "Invalid json response" ) 
-		else
-			d:resolve( status, data, headers )
-		end
-	end, function( err ) 
-		d:reject( err )
-	end )
-	return d
+    local d = promise.new() -- promise itself
+    http.Post( url, data, function( body, len, headers, status )
+        -- Check body is valid Json, if not, reject
+        local data = util.JSONToTable( body )
+        if not data then
+            d:reject( "Invalid json response" )
+        else
+            d:resolve( status, data, headers )
+        end
+    end, function( err )
+        d:reject( err )
+    end )
+    return d
 end
 
 -- Same as above but for fetch
 function NP.http.fetchIndef( url )
-	local d = promise.new()
-	http.Fetch( url, function( body, len, headers, status ) 
-		local data = util.JSONToTable( body )
-		if not data then 
-			d:reject( "Invalid json response" ) 
-		else
-			d:resolve( status, data, headers )
-		end
-	end, function( err ) 
-		d:reject( err )
-	end )
-	return d
+    local d = promise.new()
+    http.Fetch( url, function( body, len, headers, status )
+        local data = util.JSONToTable( body )
+        if not data then
+            d:reject( "Invalid json response" )
+        else
+            d:resolve( status, data, headers )
+        end
+    end, function( err )
+        d:reject( err )
+    end )
+    return d
 end
 
 -- Post but with enforced timeout
@@ -52,18 +52,18 @@ end
 -- timeout : optional timeout in seconds (def 5)
 -- resolves to function( statusCode, data, headers )
 function NP.http.post( url, data, timeout )
-	timeout = timeout or 5
-	return promise.first{
-		NP.http.postIndef( url, data ),
-		timeoutPromise( timeout )
-	}
+    timeout = timeout or 5
+    return promise.first{
+        NP.http.postIndef( url, data ),
+        timeoutPromise( timeout )
+    }
 end
 
 -- Same as above but for fetch
 function NP.http.fetch( url, timeout )
-	timeout = timeout or 5
-	return promise.first{
-		NP.http.fetchIndef( url ),
-		timeoutPromise( timeout )
-	}
+    timeout = timeout or 5
+    return promise.first{
+        NP.http.fetchIndef( url ),
+        timeoutPromise( timeout )
+    }
 end

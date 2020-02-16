@@ -16,119 +16,119 @@ local RESOLVED = 3
 local REJECTED = 4
 
 local function finish(deferred, state)
-	state = state or REJECTED
-	for i, f in ipairs(deferred.queue) do
-		if state == RESOLVED then
-			f:resolve( unpack(deferred.value) )
-		else
-			f:reject( unpack(deferred.value) )
-		end
-	end
-	deferred.state = state
+    state = state or REJECTED
+    for i, f in ipairs(deferred.queue) do
+        if state == RESOLVED then
+            f:resolve( unpack(deferred.value) )
+        else
+            f:reject( unpack(deferred.value) )
+        end
+    end
+    deferred.state = state
 end
 
 local function isfunction(f)
-	if type(f) == 'table' then
-		local mt = getmetatable(f)
-		return mt ~= nil and type(mt.__call) == 'function'
-	end
-	return type(f) == 'function'
+    if type(f) == 'table' then
+        local mt = getmetatable(f)
+        return mt ~= nil and type(mt.__call) == 'function'
+    end
+    return type(f) == 'function'
 end
 
 local function promise(deferred, next, success, failure, nonpromisecb)
-	if type(deferred) == 'table' and type(deferred.value[1]) == 'table' and isfunction(next) then
-		local called = false
-		local ok, err = pcall(next, deferred.value[1], function( ... )
-			if called then return end
-			called = true
-			deferred.value = { ... }
-			success()
-		end, function( ... )
-			if called then return end
-			called = true
-			deferred.value = { ... }
-			failure()
-		end)
-		if not ok and not called then
-			deferred.value = { err }
-			failure()
-		end
-	else
-		nonpromisecb()
-	end
+    if type(deferred) == 'table' and type(deferred.value[1]) == 'table' and isfunction(next) then
+        local called = false
+        local ok, err = pcall(next, deferred.value[1], function( ... )
+            if called then return end
+            called = true
+            deferred.value = { ... }
+            success()
+        end, function( ... )
+            if called then return end
+            called = true
+            deferred.value = { ... }
+            failure()
+        end)
+        if not ok and not called then
+            deferred.value = { err }
+            failure()
+        end
+    else
+        nonpromisecb()
+    end
 end
 
 local function fire(deferred)
-	local next
-	if type(deferred.value[1]) == 'table' then
-		next = deferred.value[1].next
-	end
-	promise(deferred, next, function()
-		deferred.state = RESOLVING
-		fire(deferred)
-	end, function()
-		deferred.state = REJECTING
-		fire(deferred)
-	end, function()
-		local ok
-		local v
-		if deferred.state == RESOLVING and isfunction(deferred.success) then
-			local ret = { pcall(deferred.success, unpack(deferred.value)) }
-			ok = ret[1]
-			table.remove(ret, 1)
-			v = ret
-		elseif deferred.state == REJECTING and isfunction(deferred.failure) then
-			local ret = { pcall(deferred.failure, unpack(deferred.value)) }
-			ok = ret[1]
-			table.remove(ret, 1)
-			v = ret
-			if ok then
-				deferred.state = RESOLVING
-			end
-		end
+    local next
+    if type(deferred.value[1]) == 'table' then
+        next = deferred.value[1].next
+    end
+    promise(deferred, next, function()
+        deferred.state = RESOLVING
+        fire(deferred)
+    end, function()
+        deferred.state = REJECTING
+        fire(deferred)
+    end, function()
+        local ok
+        local v
+        if deferred.state == RESOLVING and isfunction(deferred.success) then
+            local ret = { pcall(deferred.success, unpack(deferred.value)) }
+            ok = ret[1]
+            table.remove(ret, 1)
+            v = ret
+        elseif deferred.state == REJECTING and isfunction(deferred.failure) then
+            local ret = { pcall(deferred.failure, unpack(deferred.value)) }
+            ok = ret[1]
+            table.remove(ret, 1)
+            v = ret
+            if ok then
+                deferred.state = RESOLVING
+            end
+        end
 
-		if ok ~= nil then
-			if ok then
-				deferred.value = v
-			else
-				deferred.value = v
-				return finish(deferred)
-			end
-		end
+        if ok ~= nil then
+            if ok then
+                deferred.value = v
+            else
+                deferred.value = v
+                return finish(deferred)
+            end
+        end
 
-		if deferred.value[1] == deferred then
-			deferred.value = { pcall(error, 'resolving promise with itself') }
-			return finish(deferred)
-		else
-			promise(deferred, next, function()
-				finish(deferred, RESOLVED)
-			end, function(state)
-				finish(deferred, state)
-			end, function()
-				finish(deferred, deferred.state == RESOLVING and RESOLVED)
-			end)
-		end
-	end)
+        if deferred.value[1] == deferred then
+            deferred.value = { pcall(error, 'resolving promise with itself') }
+            return finish(deferred)
+        else
+            promise(deferred, next, function()
+                finish(deferred, RESOLVED)
+            end, function(state)
+                finish(deferred, state)
+            end, function()
+                finish(deferred, deferred.state == RESOLVING and RESOLVED)
+            end)
+        end
+    end)
 end
 
 local function resolve(deferred, state, ...)
-	if deferred.state == 0 then
-		deferred.value = { ... }
-		deferred.state = state
-		fire(deferred)
-	end
-	return deferred
+    if deferred.state == 0 then
+        deferred.value = { ... }
+        deferred.state = state
+        fire(deferred)
+    end
+    return deferred
 end
 
 --
 -- PUBLIC API
 --
 function deferred:resolve( ... )
-	return resolve(self, RESOLVING, ...)
+    return resolve(self, RESOLVING, ...)
 end
 
 function deferred:reject( ... )
-	return resolve(self, REJECTING, ...)
+    return resolve(self, REJECTING, ...)
 end
 
 --- Returns a new promise object.
@@ -167,38 +167,38 @@ end
 ---     print('Error', err)
 --- end)
 function M.new(options)
-	if isfunction(options) then
-		local d = M.new()
-		local ok, err = pcall(options, d)
-		if not ok then
-			d:reject(err)
-		end
-		return d
-	end
-	options = options or {}
-	local d
-	d = {
-		next = function(self, success, failure)
-			local next = M.new({success = success, failure = failure, extend = options.extend})
-			if d.state == RESOLVED then
-				next:resolve( unpack(d.value) )
-			elseif d.state == REJECTED then
-				next:reject( unpack(d.value) )
-			else
-				table.insert(d.queue, next)
-			end
-			return next
-		end,
-		state = 0,
-		queue = {},
-		success = options.success,
-		failure = options.failure,
-	}
-	d = setmetatable(d, deferred)
-	if isfunction(options.extend) then
-		options.extend(d)
-	end
-	return d
+    if isfunction(options) then
+        local d = M.new()
+        local ok, err = pcall(options, d)
+        if not ok then
+            d:reject(err)
+        end
+        return d
+    end
+    options = options or {}
+    local d
+    d = {
+        next = function(self, success, failure)
+            local next = M.new({success = success, failure = failure, extend = options.extend})
+            if d.state == RESOLVED then
+                next:resolve( unpack(d.value) )
+            elseif d.state == REJECTED then
+                next:reject( unpack(d.value) )
+            else
+                table.insert(d.queue, next)
+            end
+            return next
+        end,
+        state = 0,
+        queue = {},
+        success = options.success,
+        failure = options.failure,
+    }
+    d = setmetatable(d, deferred)
+    if isfunction(options.extend) then
+        options.extend(d)
+    end
+    return d
 end
 
 --- Returns a new promise object that is resolved when all promises are resolved/rejected.
@@ -217,43 +217,43 @@ end
 ---       -- at least one error)
 ---   end)
 function M.all(args)
-	local d = M.new()
-	if #args == 0 then
-		return d:resolve({})
-	end
-	local method = "resolve"
-	local pending = #args
-	local results = {}
-	local multi = false
+    local d = M.new()
+    if #args == 0 then
+        return d:resolve({})
+    end
+    local method = "resolve"
+    local pending = #args
+    local results = {}
+    local multi = false
 
-	local function synchronizer(i, resolved)
-		return function( ... )
-			local d = { ... }
-			results[i] = d
-			if #d > 1 then
-				multi = true
-			end
+    local function synchronizer(i, resolved)
+        return function( ... )
+            local d = { ... }
+            results[i] = d
+            if #d > 1 then
+                multi = true
+            end
 
-			if not resolved then
-				method = "reject"
-			end
-			pending = pending - 1
-			if pending == 0 then
-				if not multi then
-					for k, v in ipairs(results) do
-						results[k] = v[1]
-					end
-				end
-				d[method](d, results)
-			end
-			return ...
-		end
-	end
+            if not resolved then
+                method = "reject"
+            end
+            pending = pending - 1
+            if pending == 0 then
+                if not multi then
+                    for k, v in ipairs(results) do
+                        results[k] = v[1]
+                    end
+                end
+                d[method](d, results)
+            end
+            return ...
+        end
+    end
 
-	for i = 1, pending do
-		args[i]:next(synchronizer(i, true), synchronizer(i, false))
-	end
-	return d
+    for i = 1, pending do
+        args[i]:next(synchronizer(i, true), synchronizer(i, false))
+    end
+    return d
 end
 
 --- Returns a new promise object that is resolved with the values of sequential application of function fn to each element in the list. fn is expected to return promise object.
@@ -270,22 +270,22 @@ end
 ---     -- handle reading error
 --- end)
 function M.map(args, fn)
-	local d = M.new()
-	local results = {}
-	local function donext(i)
-		if i > #args then
-			d:resolve(results)
-		else
-			fn(args[i]):next(function(res)
-				table.insert(results, res)
-				donext(i+1)
-			end, function(err)
-				d:reject(err)
-			end)
-		end
-	end
-	donext(1)
-	return d
+    local d = M.new()
+    local results = {}
+    local function donext(i)
+        if i > #args then
+            d:resolve(results)
+        else
+            fn(args[i]):next(function(res)
+                table.insert(results, res)
+                donext(i+1)
+            end, function(err)
+                d:reject(err)
+            end)
+        end
+    end
+    donext(1)
+    return d
 end
 
 --- Returns a new promise object that is resolved as soon as the first of the promises gets resolved/rejected.
@@ -310,15 +310,15 @@ end
 ---       -- either timeout or I/O error...
 ---   end)
 function M.first(args)
-	local d = M.new()
-	for _, v in ipairs(args) do
-		v:next(function( ... )
-			d:resolve( ... )
-		end, function( ... )
-			d:reject( ... )
-		end)
-	end
-	return d
+    local d = M.new()
+    for _, v in ipairs(args) do
+        v:next(function( ... )
+            d:resolve( ... )
+        end, function( ... )
+            d:reject( ... )
+        end)
+    end
+    return d
 end
 
 --- A promise is an object that can store a value to be retrieved by a future object.
@@ -331,13 +331,13 @@ end
 --- @usage
 --- -- Reading two files sequentially:
 --- read('first.txt'):next(function(s)
---- 	print('File file:', s)
---- 	return read('second.txt')
+---     print('File file:', s)
+---     return read('second.txt')
 --- end):next(function(s)
---- 	print('Second file:', s)
+---     print('Second file:', s)
 --- end):next(nil, function(err)
---- 	-- error while reading first or second file
---- 	print('Error', err)
+---     -- error while reading first or second file
+---     print('Error', err)
 --- end)
 
 --- Resolve promise object with value.
