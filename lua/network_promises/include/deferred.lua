@@ -1,5 +1,5 @@
 -- This lib was written by zserge, https://github.com/zserge/lua-promises
--- Modified for CFC to allow varargs in resolve and reject
+-- Modified for CFC to allow varargs in resolve and reject, along with enforcing rejected promises to be handled
 
 --- A+ promises in Lua.
 --- @module deferred
@@ -23,6 +23,9 @@ local function finish(deferred, state)
         else
             f:reject( unpack(deferred.value) )
         end
+    end
+    if state == REJECTED and #deferred.queue == 0 then
+        error("Uncaught rejection or exception in promise:\n" .. table.concat(deferred.value, "\t"))
     end
     deferred.state = state
 end
@@ -74,16 +77,19 @@ local function fire(deferred)
         local v
         if deferred.state == RESOLVING and isfunction(deferred.success) then
             local ret = { pcall(deferred.success, unpack(deferred.value)) }
-            ok = ret[1]
-            table.remove(ret, 1)
+            ok = table.remove(ret, 1)
             v = ret
-        elseif deferred.state == REJECTING and isfunction(deferred.failure) then
+            if not ok then
+                table.insert(ret, "\nContaining next defined in " .. deferred.successInfo.short_src .. " at line " .. deferred.successInfo.linedefined .. "\n")
+            end
+        elseif deferred.state == REJECTING  and isfunction(deferred.failure) then
             local ret = { pcall(deferred.failure, unpack(deferred.value)) }
-            ok = ret[1]
-            table.remove(ret, 1)
+            ok = table.remove(ret, 1)
             v = ret
             if ok then
                 deferred.state = RESOLVING
+            else
+                table.insert(ret, "\nContaining next defined in " .. deferred.failureInfo.short_src .. " at line " .. deferred.failureInfo.linedefined .. "\n")
             end
         end
 
@@ -112,7 +118,7 @@ local function fire(deferred)
 end
 
 local function resolve(deferred, state, ...)
-    if deferred.state == 0 then
+    if deferred.state == PENDING then
         deferred.value = { ... }
         deferred.state = state
         fire(deferred)
@@ -189,11 +195,17 @@ function M.new(options)
             end
             return next
         end,
-        state = 0,
+        state = PENDING,
         queue = {},
         success = options.success,
         failure = options.failure,
     }
+    if options.success and isfunction(options.success) then
+        d.successInfo = debug.getinfo(options.success, "S")
+    end
+    if options.failure and isfunction(options.failure) then
+        d.failureInfo = debug.getinfo(options.failure, "S")
+    end
     d = setmetatable(d, deferred)
     if isfunction(options.extend) then
         options.extend(d)
