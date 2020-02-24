@@ -25,7 +25,10 @@ local function finish(deferred, state)
         end
     end
     if state == REJECTED and #deferred.queue == 0 then
-        error("Uncaught rejection or exception in promise:\n" .. table.concat(deferred.value, "\t"))
+        timer.Simple(0, function() 
+            error("Uncaught rejection or exception in promise:\n" .. table.concat(deferred.value, "\n") .. "IGNORE FOLLOWING 4 LINES") 
+        end )
+
     end
     deferred.state = state
 end
@@ -41,7 +44,7 @@ end
 local function promise(deferred, next, success, failure, nonpromisecb)
     if type(deferred) == 'table' and type(deferred.value[1]) == 'table' and isfunction(next) then
         local called = false
-        local ok, err = pcall(next, deferred.value[1], function( ... )
+        local ok, err, stack = xdcall(next, deferred.value[1], function( ... )
             if called then return end
             called = true
             deferred.value = { ... }
@@ -53,7 +56,7 @@ local function promise(deferred, next, success, failure, nonpromisecb)
             failure()
         end)
         if not ok and not called then
-            deferred.value = { err }
+            deferred.value = { err, stack }
             failure()
         end
     else
@@ -76,14 +79,14 @@ local function fire(deferred)
         local ok
         local v
         if deferred.state == RESOLVING and isfunction(deferred.success) then
-            local ret = { pcall(deferred.success, unpack(deferred.value)) }
+            local ret = { xdcall(deferred.success, unpack(deferred.value)) }
             ok = table.remove(ret, 1)
             v = ret
             if not ok then
                 table.insert(ret, "\nContaining next defined in " .. deferred.successInfo.short_src .. " at line " .. deferred.successInfo.linedefined .. "\n")
             end
         elseif deferred.state == REJECTING  and isfunction(deferred.failure) then
-            local ret = { pcall(deferred.failure, unpack(deferred.value)) }
+            local ret = { xdcall(deferred.failure, unpack(deferred.value)) }
             ok = table.remove(ret, 1)
             v = ret
             if ok then
