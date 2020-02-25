@@ -21,7 +21,7 @@ local function responseSuccess( d, body, status, headers )
     d[method]( d, data or "Invalid json response", status, headers )
 end
 
--- http.post as a promise, resolves whenever http finishes, or never if it doesn't (Looking at you, ISteamHTTP)
+-- http.post as a promise, resolves whenever http finishes, or never if it doesn't ( Looking at you, ISteamHTTP )
 -- url    : post url
 -- data   : post args as table
 -- resolves to function( data, statusCode, headers )
@@ -46,7 +46,7 @@ function NP.http.fetchIndef( url )
     return d
 end
 
--- HTTP as a promise, resolves whenever http finishes, or never if it doesn't (Looking at you, ISteamHTTP)
+-- HTTP as a promise, resolves whenever http finishes, or never if it doesn't ( Looking at you, ISteamHTTP )
 -- method   : GET, PUT, etc.
 -- endPoint : Appended to settings.apiRoot
 -- params   : params for GET, POST, HEAD
@@ -78,7 +78,7 @@ end
 -- This promise is guaranteed to resolve/reject eventually
 -- url     : post url
 -- data    : post args as table
--- timeout : optional timeout in seconds (def 5)
+-- timeout : optional timeout in seconds ( def 5 )
 -- resolves to function( data, statusCode, headers )
 function NP.http.post( url, data, timeout )
     timeout = timeout or 5

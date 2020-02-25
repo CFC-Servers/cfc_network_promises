@@ -13,16 +13,16 @@ end
 
 -- takes func, args
 -- if success, returns true, retArgs
--- if not    , returns false, error, stack
+-- if not, returns false, error, stack
 function xdcall( func, ... )
     local co = coroutine.create( func )
     local args = { ... }
     while true do
         coroutine.yield = capturedYield
-        local data = { coroutine.resume( co, unpack(args) ) }
+        local data = { coroutine.resume( co, unpack( args ) ) }
         coroutine.yield = oldYield
 
-        --p(data)
+        -- p( data )
         local success = table.remove( data, 1 )
         if success then
             if data[1] == trueYield then
