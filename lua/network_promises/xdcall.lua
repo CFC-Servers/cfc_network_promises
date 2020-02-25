@@ -18,7 +18,6 @@ function xdcall( func, ... )
     local co = coroutine.create( func )
     local args = { ... }
     while true do
-
         coroutine.yield = capturedYield
         local data = { coroutine.resume( co, unpack(args) ) }
         coroutine.yield = oldYield

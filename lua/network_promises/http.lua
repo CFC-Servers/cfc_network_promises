@@ -57,7 +57,7 @@ function NP.http.requestIndef( method, endPoint, params, settings )
     local d = promise.new()
     local url = settings.apiRoot .. endPoint
 
-    local struct = HTTPRequest({
+    local struct = HTTPRequest( {
         failed = function( err )
             d:reject( err, -1 )
         end,
@@ -69,7 +69,7 @@ function NP.http.requestIndef( method, endPoint, params, settings )
         parameters = params,
         type = "application/json",
         Token = settings.apiKey
-    })
+    } )
 end
 
 -- Post but with enforced timeout

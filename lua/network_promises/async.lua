@@ -41,7 +41,6 @@ promiseReturn = function( co, state, ownP, debugInfo )
 	end
 end
 
-
 -- Make a function async
 function async( f )
 	-- Debug info for error locations as they are propagated down the promise chain, and their location is lost in the stack
@@ -53,12 +52,3 @@ function await( p, errHandler )
 	local co = assert( coroutine.running(), "Cannot use await outside of async function" )
 	return coroutine.yield( p )
 end
-
--- example
-if SERVER then return end
-do return end
-
-getFactions = async( function()
-	local success, data, statusCode = await( NP.http.fetch( "https://factions.cfcservers.org/dev/factions" ) )
-	return success and data or error( "Failed to get factions, status code: " .. statusCode )
-end )

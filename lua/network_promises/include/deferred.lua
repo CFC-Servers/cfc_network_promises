@@ -15,36 +15,28 @@ local REJECTING = 2
 local RESOLVED = 3
 local REJECTED = 4
 
-local function finish(deferred, state)
+local function finish( deferred, state )
     state = state or REJECTED
-    for i, f in ipairs(deferred.queue) do
+    for i, f in ipairs( deferred.queue ) do
         if state == RESOLVED then
-            f:resolve( unpack(deferred.value) )
+            f:resolve( unpack( deferred.value ) )
         else
-            f:reject( unpack(deferred.value) )
+            f:reject( unpack( deferred.value ) )
         end
     end
     if state == REJECTED and #deferred.queue == 0 then
         timer.Simple(0, function() 
-            error("Uncaught rejection or exception in promise:\n" .. table.concat(deferred.value, "\n") .. "IGNORE FOLLOWING 4 LINES") 
+            error( "Uncaught rejection or exception in promise:\n" .. table.concat( deferred.value, "\n" ) .. "IGNORE FOLLOWING 4 LINES" ) 
         end )
 
     end
     deferred.state = state
 end
 
-local function isfunction(f)
-    if type(f) == 'table' then
-        local mt = getmetatable(f)
-        return mt ~= nil and type(mt.__call) == 'function'
-    end
-    return type(f) == 'function'
-end
-
-local function promise(deferred, next, success, failure, nonpromisecb)
-    if type(deferred) == 'table' and type(deferred.value[1]) == 'table' and isfunction(next) then
+local function promise( deferred, next, success, failure, nonpromisecb )
+    if type( deferred ) == 'table' and type( deferred.value[1] ) == 'table' and isfunction( next ) then
         local called = false
-        local ok, err, stack = xdcall(next, deferred.value[1], function( ... )
+        local ok, err, stack = xdcall( next, deferred.value[1], function( ... )
             if called then return end
             called = true
             deferred.value = { ... }
@@ -54,7 +46,7 @@ local function promise(deferred, next, success, failure, nonpromisecb)
             called = true
             deferred.value = { ... }
             failure()
-        end)
+        end )
         if not ok and not called then
             deferred.value = { err, stack }
             failure()
@@ -64,35 +56,37 @@ local function promise(deferred, next, success, failure, nonpromisecb)
     end
 end
 
-local function fire(deferred)
+local function fire( deferred )
     local next
-    if type(deferred.value[1]) == 'table' then
+    if type( deferred.value[1] ) == 'table' then
         next = deferred.value[1].next
     end
-    promise(deferred, next, function()
+    promise( deferred, next, function()
         deferred.state = RESOLVING
-        fire(deferred)
+        fire( deferred )
     end, function()
         deferred.state = REJECTING
-        fire(deferred)
+        fire( deferred )
     end, function()
         local ok
         local v
-        if deferred.state == RESOLVING and isfunction(deferred.success) then
-            local ret = { xdcall(deferred.success, unpack(deferred.value)) }
-            ok = table.remove(ret, 1)
+        if deferred.state == RESOLVING and isfunction( deferred.success ) then
+            local ret = { xdcall( deferred.success, unpack( deferred.value ) ) }
+            ok = table.remove( ret, 1 )
             v = ret
             if not ok then
-                table.insert(ret, "\nContaining next defined in " .. deferred.successInfo.short_src .. " at line " .. deferred.successInfo.linedefined .. "\n")
+                table.insert( ret, "\nContaining next defined in " .. deferred.successInfo.short_src .. 
+                    " at line " .. deferred.successInfo.linedefined .. "\n" )
             end
-        elseif deferred.state == REJECTING  and isfunction(deferred.failure) then
-            local ret = { xdcall(deferred.failure, unpack(deferred.value)) }
-            ok = table.remove(ret, 1)
+        elseif deferred.state == REJECTING  and isfunction( deferred.failure ) then
+            local ret = { xdcall( deferred.failure, unpack( deferred.value ) ) }
+            ok = table.remove( ret, 1 )
             v = ret
             if ok then
                 deferred.state = RESOLVING
             else
-                table.insert(ret, "\nContaining next defined in " .. deferred.failureInfo.short_src .. " at line " .. deferred.failureInfo.linedefined .. "\n")
+                table.insert( ret, "\nContaining next defined in " .. deferred.failureInfo.short_src .. 
+                    " at line " .. deferred.failureInfo.linedefined .. "\n" )
             end
         end
 
@@ -101,30 +95,30 @@ local function fire(deferred)
                 deferred.value = v
             else
                 deferred.value = v
-                return finish(deferred)
+                return finish( deferred )
             end
         end
 
         if deferred.value[1] == deferred then
-            deferred.value = { pcall(error, 'resolving promise with itself') }
-            return finish(deferred)
+            deferred.value = { pcall( error, 'resolving promise with itself' ) }
+            return finish( deferred )
         else
-            promise(deferred, next, function()
-                finish(deferred, RESOLVED)
-            end, function(state)
-                finish(deferred, state)
+            promise( deferred, next, function()
+                finish( deferred, RESOLVED )
+            end, function( state )
+                finish( deferred, state )
             end, function()
-                finish(deferred, deferred.state == RESOLVING and RESOLVED)
+                finish( deferred, deferred.state == RESOLVING and RESOLVED )
             end)
         end
     end)
 end
 
-local function resolve(deferred, state, ...)
+local function resolve( deferred, state, ... )
     if deferred.state == PENDING then
         deferred.value = { ... }
         deferred.state = state
-        fire(deferred)
+        fire( deferred )
     end
     return deferred
 end
@@ -133,11 +127,11 @@ end
 -- PUBLIC API
 --
 function deferred:resolve( ... )
-    return resolve(self, RESOLVING, ...)
+    return resolve( self, RESOLVING, ... )
 end
 
 function deferred:reject( ... )
-    return resolve(self, REJECTING, ...)
+    return resolve( self, REJECTING, ... )
 end
 
 --- Returns a new promise object.
@@ -175,26 +169,26 @@ end
 ---   end, function(err)
 ---     print('Error', err)
 --- end)
-function M.new(options)
-    if isfunction(options) then
+function M.new( options )
+    if isfunction( options ) then
         local d = M.new()
-        local ok, err = pcall(options, d)
+        local ok, err = pcall( options, d )
         if not ok then
-            d:reject(err)
+            d:reject( err )
         end
         return d
     end
     options = options or {}
     local d
     d = {
-        next = function(self, success, failure)
-            local next = M.new({success = success, failure = failure, extend = options.extend})
+        next = function( self, success, failure )
+            local next = M.new( { success = success, failure = failure, extend = options.extend } )
             if d.state == RESOLVED then
-                next:resolve( unpack(d.value) )
+                next:resolve( unpack( d.value ) )
             elseif d.state == REJECTED then
-                next:reject( unpack(d.value) )
+                next:reject( unpack( d.value ) )
             else
-                table.insert(d.queue, next)
+                table.insert( d.queue, next )
             end
             return next
         end,
@@ -203,15 +197,15 @@ function M.new(options)
         success = options.success,
         failure = options.failure,
     }
-    if options.success and isfunction(options.success) then
-        d.successInfo = debug.getinfo(options.success, "S")
+    if options.success and isfunction( options.success ) then
+        d.successInfo = debug.getinfo( options.success, "S" )
     end
-    if options.failure and isfunction(options.failure) then
-        d.failureInfo = debug.getinfo(options.failure, "S")
+    if options.failure and isfunction( options.failure ) then
+        d.failureInfo = debug.getinfo( options.failure, "S" )
     end
-    d = setmetatable(d, deferred)
-    if isfunction(options.extend) then
-        options.extend(d)
+    d = setmetatable( d, deferred )
+    if isfunction( options.extend ) then
+        options.extend( d )
     end
     return d
 end
@@ -231,17 +225,17 @@ end
 ---       -- handle errors here (all requests are finished and there has been
 ---       -- at least one error)
 ---   end)
-function M.all(args)
+function M.all( args )
     local d = M.new()
     if #args == 0 then
-        return d:resolve({})
+        return d:resolve( {} )
     end
     local method = "resolve"
     local pending = #args
     local results = {}
     local multi = false
 
-    local function synchronizer(i, resolved)
+    local function synchronizer( i, resolved )
         return function( ... )
             local d = { ... }
             results[i] = d
@@ -255,18 +249,18 @@ function M.all(args)
             pending = pending - 1
             if pending == 0 then
                 if not multi then
-                    for k, v in ipairs(results) do
+                    for k, v in ipairs( results ) do
                         results[k] = v[1]
                     end
                 end
-                d[method](d, results)
+                d[method]( d, results )
             end
             return ...
         end
     end
 
     for i = 1, pending do
-        args[i]:next(synchronizer(i, true), synchronizer(i, false))
+        args[i]:next( synchronizer( i, true ), synchronizer( i, false ) )
     end
     return d
 end
@@ -284,22 +278,22 @@ end
 ---   end, function(err)
 ---     -- handle reading error
 --- end)
-function M.map(args, fn)
+function M.map( args, fn )
     local d = M.new()
     local results = {}
-    local function donext(i)
+    local function donext( i )
         if i > #args then
-            d:resolve(results)
+            d:resolve( results )
         else
-            fn(args[i]):next(function(res)
-                table.insert(results, res)
-                donext(i+1)
-            end, function(err)
-                d:reject(err)
+            fn( args[i] ):next( function( res )
+                table.insert( results, res )
+                donext( i + 1 )
+            end, function( err )
+                d:reject( err )
             end)
         end
     end
-    donext(1)
+    donext( 1 )
     return d
 end
 
@@ -324,14 +318,14 @@ end
 ---     end, function(err)
 ---       -- either timeout or I/O error...
 ---   end)
-function M.first(args)
+function M.first( args )
     local d = M.new()
-    for _, v in ipairs(args) do
-        v:next(function( ... )
+    for _, v in ipairs( args ) do
+        v:next( function( ... )
             d:resolve( ... )
         end, function( ... )
             d:reject( ... )
-        end)
+        end )
     end
     return d
 end
