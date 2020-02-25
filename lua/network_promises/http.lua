@@ -3,22 +3,20 @@ NP.http = {}
 -- Returns a promise that resolves after t seconds
 -- fail : Should the promise reject after timeout
 function NP.timeout( t, fail )
-    local method = fail and "reject" or "resolve"
     local d = promise.new()
+    local method = fail and d.reject or d.resolve
     timer.Simple( t, function()
-        d[method]( d, "Timeout" )
+        method( d, "Timeout" )
     end )
     return d
 end
 
 local function responseSuccess( d, body, status, headers )
-    -- Check body is valid Json, if not, reject
-    local data = util.JSONToTable( body )
-    local method = "reject"
-    if math.floor( status / 100 ) == 2 and data then
-        method = "resolve"
+    if math.floor( status / 100 ) == 2 then
+        d:resolve( body, status, headers )
+    else
+        d:reject( body, status, headers )
     end
-    d[method]( d, data or "Invalid json response", status, headers )
 end
 
 -- http.post as a promise, resolves whenever http finishes, or never if it doesn't (Looking at you, ISteamHTTP)
@@ -47,17 +45,16 @@ function NP.http.fetchIndef( url )
 end
 
 -- HTTP as a promise, resolves whenever http finishes, or never if it doesn't (Looking at you, ISteamHTTP)
--- method   : GET, PUT, etc.
--- endPoint : Appended to settings.apiRoot
--- params   : params for GET, POST, HEAD
--- settings : { apiRoot = "myRoot", apiKey = "myKey", timeout = 5 } - timeout only functional in NP.http.request
+-- method    : GET, PUT, etc.
+-- url       : 
+-- overrides : Table to be merged with the http struct (includes authToken as Token alias)
 -- resolves to function( data, statusCode, headers )
-function NP.http.requestIndef( method, endPoint, params, settings )
+function NP.http.requestIndef( method, url, overrides )
     method = method or "GET"
     local d = promise.new()
-    local url = settings.apiRoot .. endPoint
+    overrides = overrides or {}
 
-    local struct = HTTPRequest( {
+    local structData = {
         failed = function( err )
             d:reject( err, -1 )
         end,
@@ -68,10 +65,14 @@ function NP.http.requestIndef( method, endPoint, params, settings )
         url = url,
         parameters = params,
         type = "application/json",
-        Token = settings.apiKey
-    } )
+        Token = overrides.authToken
+    }
 
+    table.Merge( structData, overrides )
+    local struct = HTTPRequest( structData )
     HTTP( struct )
+
+    return d
 end
 
 -- Post but with enforced timeout
@@ -98,10 +99,11 @@ function NP.http.fetch( url, timeout )
 end
 
 -- Same as above but for request
-function NP.http.request( method, endPoint, params, settings )
-    local timeout = settings.timeout or 5
+function NP.http.request( method, url, overrides )
+    overrides = overrides or {}
+    local timeout = overrides.timeout or 5
     return promise.first{
-        NP.http.fetchIndef( url ),
+        NP.http.requestIndef( method, url, overrides ),
         NP.timeout( timeout, true )
     }
 end

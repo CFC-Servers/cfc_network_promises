@@ -67,16 +67,16 @@ Halts an enclosing coroutine until the promise resolves/rejects, returns `resolv
 Server side:
 ```lua
     -- "getData" automatically pooled by this function.
-    -- Receive on getServerStatus, return the result of fetching the scripting url
+    -- Receive on getData, return the result of fetching the scripting url
     NP.net.receive( "getData", function( ply )
-        return NP.http.fetch( "https://my.website.com/getData" )
+        return NP.http.fetch( "https://cfcservers.org/getData" )
     end )
 
     -- Alternative implementation:
     NP.net.receive( "getData", async( function( ply )
-        local success, data, status = await( NP.http.fetch( "https://my.website.com/getData" ) )
+        local success, body, status = await( NP.http.fetch( "https://cfcservers.org/getData" ) )
         if success then
-            return data, status
+            return body, status
         else
             error( "Failed to reach end point" )
         end
@@ -85,10 +85,10 @@ Server side:
 Client side:
 ```lua
     -- Send net message, print result or error
-    NP.net.send( "getData" ):next( function( data, status, headers )
+    NP.net.send( "getData" ):next( function( body, status, headers )
         -- Success
         print( status ) -- Hopefully 200
-        PrintTable( data ) -- Some data
+        PrintTable( util.JSONToTable( body ) ) -- Some data
     end, function( err )
         -- Failure
         print( "Error: ", err )
@@ -97,10 +97,10 @@ Client side:
     -- Alternative implementation:
     asyncCall( function()
         -- Thread is halted until the net send finishes, allowing you to treat it as a synchronous function.
-        local success, data, status = await( NP.net.send( "getData" ) )
+        local success, body, status = await( NP.net.send( "getData" ) )
         if success then
             print( status )
-            PrintTable( data )
+            PrintTable( util.JSONToTable( body ) )
         else
             print( "Error: ", err )
         end
