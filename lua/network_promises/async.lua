@@ -47,8 +47,14 @@ function async( f )
 	return promiseReturn( coroutine.create( f ), nil, nil, debug.getinfo( f, "S" ) )
 end
 
+-- Make a function async and call it
+function asyncCall( f )
+	return async( f )()
+end
+
 -- Wait for a promise to resolve in an async function
 function await( p, errHandler )
 	assert( coroutine.running(), "Cannot use await outside of async function" )
 	return coroutine.yield( p )
 end
+
