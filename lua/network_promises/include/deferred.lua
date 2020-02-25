@@ -25,7 +25,7 @@ local function finish( deferred, state )
         end
     end
     if state == REJECTED and #deferred.queue == 0 then
-        timer.Simple(0, function()
+        timer.Simple( 0, function()
             error( "Uncaught rejection or exception in promise:\n" .. table.concat( deferred.value, "\n" ) .. "IGNORE FOLLOWING 4 LINES" )
         end )
 
@@ -109,9 +109,9 @@ local function fire( deferred )
                 finish( deferred, state )
             end, function()
                 finish( deferred, deferred.state == RESOLVING and RESOLVED )
-            end)
+            end )
         end
-    end)
+    end )
 end
 
 local function resolve( deferred, state, ... )
@@ -137,38 +137,38 @@ end
 --- Returns a new promise object.
 --- @treturn Promise New promise
 --- @usage
---- local deferred = require("deferred")
+--- local deferred = require( "deferred" )
 ---
 --- --
 --- -- Converting callback-based API into promise-based is very straightforward:
 --- --
---- -- 1) Create promise object
---- -- 2) Start your asynchronous action
---- -- 3) Resolve promise object whenever action is finished (only first resolution
---- --    is accepted, others are ignored)
---- -- 4) Reject promise object whenever action is failed (only first rejection is
---- --    accepted, others are ignored)
---- -- 5) Return promise object letting calling side to add a chain of callbacks to
+--- -- 1 ) Create promise object
+--- -- 2 ) Start your asynchronous action
+--- -- 3 ) Resolve promise object whenever action is finished ( only first resolution
+--- --    is accepted, others are ignored )
+--- -- 4 ) Reject promise object whenever action is failed ( only first rejection is
+--- --    accepted, others are ignored )
+--- -- 5 ) Return promise object letting calling side to add a chain of callbacks to
 --- --    your asynchronous function
 ---
---- function read(f)
+--- function read( f )
 ---   local d = deferred.new()
----   readasync(f, function(contents, err)
+---   readasync( f, function( contents, err )
 ---       if err == nil then
----         d:resolve(contents)
+---         d:resolve( contents )
 ---       else
----         d:reject(err)
+---         d:reject( err )
 ---       end
----   end)
+---   end )
 ---   return d
 --- end
 ---
 --- -- You can now use read() like this:
---- read("file.txt"):next(function(s)
----     print("File.txt contents: ", s)
----   end, function(err)
----     print("Error", err)
---- end)
+--- read( "file.txt" ):next( function( s )
+---     print( "File.txt contents: ", s )
+---   end, function( err )
+---     print( "Error", err )
+--- end )
 function M.new( options )
     if isfunction( options ) then
         local d = M.new()
@@ -214,17 +214,17 @@ end
 --- @param args list of promise
 --- @treturn Promise New promise
 --- @usage
---- deferred.all({
----     http.get("http://example.com/first"),
----     http.get("http://example.com/second"),
----     http.get("http://example.com/third"),
----   }):next(function(results)
----       -- handle results here (all requests are finished and there has been
----       -- no errors)
----     end, function(results)
----       -- handle errors here (all requests are finished and there has been
----       -- at least one error)
----   end)
+--- deferred.all( {
+---     http.get( "http://example.com/first" ),
+---     http.get( "http://example.com/second" ),
+---     http.get( "http://example.com/third" ),
+---   } ):next( function( results )
+---       -- handle results here ( all requests are finished and there has been
+---       -- no errors )
+---     end, function( results )
+---       -- handle errors here ( all requests are finished and there has been
+---       -- at least one error )
+---   end )
 function M.all( args )
     local d = M.new()
     if #args == 0 then
@@ -273,11 +273,11 @@ end
 --- @usage
 --- local items = {"a.txt", "b.txt", "c.txt"}
 --- -- Read 3 files, one by one
---- deferred.map(items, read):next(function(files)
+--- deferred.map( items, read ):next( function( files )
 ---     -- here files is an array of file contents for each of the files
----   end, function(err)
+---   end, function( err )
 ---     -- handle reading error
---- end)
+--- end )
 function M.map( args, fn )
     local d = M.new()
     local results = {}
@@ -290,7 +290,7 @@ function M.map( args, fn )
                 donext( i + 1 )
             end, function( err )
                 d:reject( err )
-            end)
+            end )
         end
     end
     donext( 1 )
@@ -302,22 +302,22 @@ end
 --- @treturn Promise New promise
 --- @usage
 --- -- returns a promise that gets rejected after a certain timeout
---- function timeout(sec)
+--- function timeout( sec )
 ---   local d = deferred.new()
----   settimeout(function()
----       d:reject("Timeout")
----     end, sec)
+---   settimeout( function()
+---       d:reject( "Timeout" )
+---     end, sec )
 ---   return d
 --- end
 ---
---- deferred.first({
----     read(somefile), -- resolves promise with contents, or rejects with error
----     timeout(5),
----   }):next(function(result)
+--- deferred.first( {
+---     read( somefile ), -- resolves promise with contents, or rejects with error
+---     timeout( 5 ),
+---   } ):next( function( result )
 ---       -- file was read successfully...
----     end, function(err)
+---     end, function( err )
 ---       -- either timeout or I/O error...
----   end)
+---   end )
 function M.first( args )
     local d = M.new()
     for _, v in ipairs( args ) do
@@ -335,19 +335,19 @@ end
 
 --- Wait for the promise object.
 --- @function next
---- @tparam function cb resolve callback (function(value) end)
---- @tparam[opt] function errcb rejection callback (function(reject_value) end)
+--- @tparam function cb resolve callback ( function( value ) end )
+--- @tparam[opt] function errcb rejection callback ( function( reject_value ) end )
 --- @usage
 --- -- Reading two files sequentially:
---- read("first.txt"):next(function(s)
----     print("File file:", s)
----     return read("second.txt")
---- end):next(function(s)
----     print("Second file:", s)
---- end):next(nil, function(err)
+--- read( "first.txt" ):next( function( s )
+---     print( "File file:", s )
+---     return read( "second.txt" )
+--- end ):next( function( s )
+---     print( "Second file:", s )
+--- end ):next( nil, function( err )
 ---     -- error while reading first or second file
----     print("Error", err)
---- end)
+---     print( "Error", err )
+--- end )
 
 --- Resolve promise object with value.
 --- @function resolve

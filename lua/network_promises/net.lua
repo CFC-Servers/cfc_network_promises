@@ -72,7 +72,7 @@ function NP.net.receive( name, func )
             net.WriteTable( args )
             net.Send( ply )
         end
-        if ret[1] and type(ret[1]) == "table" and ret[1].next then
+        if ret[1] and type( ret[1] ) == "table" and ret[1].next then
             ret[1]:next( function( ... )
                 finish( true, { ... } )
             end,
