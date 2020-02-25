@@ -22,7 +22,6 @@ function xdcall( func, ... )
         local data = { coroutine.resume( co, unpack( args ) ) }
         coroutine.yield = oldYield
 
-        -- p( data )
         local success = table.remove( data, 1 )
         if success then
             if data[1] == trueYield then
