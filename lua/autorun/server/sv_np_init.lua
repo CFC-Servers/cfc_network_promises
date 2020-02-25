@@ -1,5 +1,5 @@
 function addFiles( dir )
-    local files, dirs = file.Find( dir .. "/ * ", "LUA" )
+    local files, dirs = file.Find( dir .. "/*", "LUA" )
     if not files then return end
     for k, v in pairs( files ) do
         if string.match( v, "^.+%.lua$" ) then
