@@ -38,6 +38,5 @@ function xdcall( func, ... )
             local err = data[1]
             return false, err, debug.traceback( co )
         end
-        
     end
 end

@@ -3,7 +3,7 @@ NP.http = {}
 -- Returns a promise that resolves after t seconds
 -- fail : Should the promise reject after timeout
 function NP.timeout( t, fail )
-    method = fail and "reject" or "resolve"
+    local method = fail and "reject" or "resolve"
     local d = promise.new()
     timer.Simple( t, function()
         d[method]( d, "Timeout" )
@@ -70,6 +70,8 @@ function NP.http.requestIndef( method, endPoint, params, settings )
         type = "application/json",
         Token = settings.apiKey
     } )
+
+    HTTP( struct )
 end
 
 -- Post but with enforced timeout

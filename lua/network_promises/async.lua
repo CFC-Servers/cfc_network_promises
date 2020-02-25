@@ -49,6 +49,6 @@ end
 
 -- Wait for a promise to resolve in an async function
 function await( p, errHandler )
-	local co = assert( coroutine.running(), "Cannot use await outside of async function" )
+	assert( coroutine.running(), "Cannot use await outside of async function" )
 	return coroutine.yield( p )
 end

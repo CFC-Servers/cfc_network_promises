@@ -25,12 +25,12 @@ function NP.net.send( name, ... )
     net.Receive( name, function( len, ply )
         local id = net.ReadInt( 16 )
         local success = net.ReadBool()
-        local promise = netSends[id]
-        if not promise then return end
+        local p = netSends[id]
+        if not p then return end
         if success then
-            promise:resolve( unpack( net.ReadTable() ) )
+            p:resolve( unpack( net.ReadTable() ) )
         else
-            promise:reject( unpack( net.ReadTable() ) )
+            p:reject( unpack( net.ReadTable() ) )
         end
     end )
 

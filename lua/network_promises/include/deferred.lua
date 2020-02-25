@@ -6,8 +6,8 @@
 
 local M = {}
 
-local deferred = {}
-deferred.__index = deferred
+local Deferred = {}
+Deferred.__index = Deferred
 
 local PENDING = 0
 local RESOLVING = 1
@@ -25,8 +25,8 @@ local function finish( deferred, state )
         end
     end
     if state == REJECTED and #deferred.queue == 0 then
-        timer.Simple(0, function() 
-            error( "Uncaught rejection or exception in promise:\n" .. table.concat( deferred.value, "\n" ) .. "IGNORE FOLLOWING 4 LINES" ) 
+        timer.Simple(0, function()
+            error( "Uncaught rejection or exception in promise:\n" .. table.concat( deferred.value, "\n" ) .. "IGNORE FOLLOWING 4 LINES" )
         end )
 
     end
@@ -34,7 +34,7 @@ local function finish( deferred, state )
 end
 
 local function promise( deferred, next, success, failure, nonpromisecb )
-    if type( deferred ) == 'table' and type( deferred.value[1] ) == 'table' and isfunction( next ) then
+    if type( deferred ) == "table" and type( deferred.value[1] ) == "table" and isfunction( next ) then
         local called = false
         local ok, err, stack = xdcall( next, deferred.value[1], function( ... )
             if called then return end
@@ -58,7 +58,7 @@ end
 
 local function fire( deferred )
     local next
-    if type( deferred.value[1] ) == 'table' then
+    if type( deferred.value[1] ) == "table" then
         next = deferred.value[1].next
     end
     promise( deferred, next, function()
@@ -75,7 +75,7 @@ local function fire( deferred )
             ok = table.remove( ret, 1 )
             v = ret
             if not ok then
-                table.insert( ret, "\nContaining next defined in " .. deferred.successInfo.short_src .. 
+                table.insert( ret, "\nContaining next defined in " .. deferred.successInfo.short_src ..
                     " at line " .. deferred.successInfo.linedefined .. "\n" )
             end
         elseif deferred.state == REJECTING  and isfunction( deferred.failure ) then
@@ -85,7 +85,7 @@ local function fire( deferred )
             if ok then
                 deferred.state = RESOLVING
             else
-                table.insert( ret, "\nContaining next defined in " .. deferred.failureInfo.short_src .. 
+                table.insert( ret, "\nContaining next defined in " .. deferred.failureInfo.short_src ..
                     " at line " .. deferred.failureInfo.linedefined .. "\n" )
             end
         end
@@ -100,7 +100,7 @@ local function fire( deferred )
         end
 
         if deferred.value[1] == deferred then
-            deferred.value = { pcall( error, 'resolving promise with itself' ) }
+            deferred.value = { pcall( error, "resolving promise with itself" ) }
             return finish( deferred )
         else
             promise( deferred, next, function()
@@ -126,18 +126,18 @@ end
 --
 -- PUBLIC API
 --
-function deferred:resolve( ... )
+function Deferred:resolve( ... )
     return resolve( self, RESOLVING, ... )
 end
 
-function deferred:reject( ... )
+function Deferred:reject( ... )
     return resolve( self, REJECTING, ... )
 end
 
 --- Returns a new promise object.
 --- @treturn Promise New promise
 --- @usage
---- local deferred = require('deferred')
+--- local deferred = require("deferred")
 ---
 --- --
 --- -- Converting callback-based API into promise-based is very straightforward:
@@ -164,10 +164,10 @@ end
 --- end
 ---
 --- -- You can now use read() like this:
---- read('file.txt'):next(function(s)
----     print('File.txt contents: ', s)
+--- read("file.txt"):next(function(s)
+---     print("File.txt contents: ", s)
 ---   end, function(err)
----     print('Error', err)
+---     print("Error", err)
 --- end)
 function M.new( options )
     if isfunction( options ) then
@@ -203,7 +203,7 @@ function M.new( options )
     if options.failure and isfunction( options.failure ) then
         d.failureInfo = debug.getinfo( options.failure, "S" )
     end
-    d = setmetatable( d, deferred )
+    d = setmetatable( d, Deferred )
     if isfunction( options.extend ) then
         options.extend( d )
     end
@@ -215,9 +215,9 @@ end
 --- @treturn Promise New promise
 --- @usage
 --- deferred.all({
----     http.get('http://example.com/first'),
----     http.get('http://example.com/second'),
----     http.get('http://example.com/third'),
+---     http.get("http://example.com/first"),
+---     http.get("http://example.com/second"),
+---     http.get("http://example.com/third"),
 ---   }):next(function(results)
 ---       -- handle results here (all requests are finished and there has been
 ---       -- no errors)
@@ -237,8 +237,8 @@ function M.all( args )
 
     local function synchronizer( i, resolved )
         return function( ... )
-            local d = { ... }
-            results[i] = d
+            local data = { ... }
+            results[i] = data
             if #d > 1 then
                 multi = true
             end
@@ -271,7 +271,7 @@ end
 --- @param fn promise used to resolve the list of promise
 --- @return a new promise
 --- @usage
---- local items = {'a.txt', 'b.txt', 'c.txt'}
+--- local items = {"a.txt", "b.txt", "c.txt"}
 --- -- Read 3 files, one by one
 --- deferred.map(items, read):next(function(files)
 ---     -- here files is an array of file contents for each of the files
@@ -305,7 +305,7 @@ end
 --- function timeout(sec)
 ---   local d = deferred.new()
 ---   settimeout(function()
----       d:reject('Timeout')
+---       d:reject("Timeout")
 ---     end, sec)
 ---   return d
 --- end
@@ -339,14 +339,14 @@ end
 --- @tparam[opt] function errcb rejection callback (function(reject_value) end)
 --- @usage
 --- -- Reading two files sequentially:
---- read('first.txt'):next(function(s)
----     print('File file:', s)
----     return read('second.txt')
+--- read("first.txt"):next(function(s)
+---     print("File file:", s)
+---     return read("second.txt")
 --- end):next(function(s)
----     print('Second file:', s)
+---     print("Second file:", s)
 --- end):next(nil, function(err)
 ---     -- error while reading first or second file
----     print('Error', err)
+---     print("Error", err)
 --- end)
 
 --- Resolve promise object with value.
