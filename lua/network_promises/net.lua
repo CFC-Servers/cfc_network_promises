@@ -13,6 +13,7 @@ end
 -- ...  : netArg1, netArg2
 function NP.net.send( name, ... )
     ensureNetworkString( name )
+    netSendId = netSendId + 1
     local d = promise.new()
     net.Start( name )
     net.WriteInt( netSendId, 16 )
@@ -32,12 +33,28 @@ function NP.net.send( name, ... )
         else
             p:reject( unpack( net.ReadTable() ) )
         end
+        netSends[id] = nil
     end )
 
     return d
 end
 
--- net.Receive wrapper that removes need for net.ReadThis and net.ReadThat
+function NP.net.sendBlind( name, ... )
+    ensureNetworkString( name )
+
+    -- Create a resolved promise so this can still be used in async code
+    local d = promise.new()
+    d:resolve()
+
+    net.Start( name )
+    net.WriteInt( -1, 16 )
+    net.WriteTable{ ... }
+    net.SendToServer()
+
+    return d
+end
+
+-- net.Receive wrapper that removes need for net.ReadThis and net.WriteThat
 -- name : net message name
 -- func : function( player, netArg1, netArg2 )
 function NP.net.receive( name, func )
@@ -48,6 +65,7 @@ function NP.net.receive( name, func )
         local ret = { func( ply, unpack( data ) ) }
 
         local function finish( status, args )
+            if id == -1 then return end
             net.Start( name )
             net.WriteInt( id, 16 )
             net.WriteBool( status )
