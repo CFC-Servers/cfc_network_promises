@@ -24,12 +24,20 @@ local function finish( deferred, state )
             f:reject( unpack( deferred.value ) )
         end
     end
-    if state == REJECTED and #deferred.queue == 0 then
-        timer.Simple( 0, function()
-            error( "Uncaught rejection or exception in promise:\n" .. table.concat( deferred.value, "\n" ) .. "IGNORE FOLLOWING 4 LINES" )
-        end )
+    -- if state == REJECTED and #deferred.queue == 0 then
+    --     timer.Simple( 0, function()
+    --         local errText = ""
+    --         for k, v in ipairs( deferred.value ) do
+    --             if type( v ) == "table" then
+    --                 errText = errText .. table.ToString( v ) .. "\n"
+    --             else
+    --                 errText = errText .. tostring( v ) .. "\n"
+    --             end
+    --         end
+    --         error( "Uncaught rejection or exception in promise:\n" .. errText .. "IGNORE FOLLOWING 4 LINES" )
+    --     end )
 
-    end
+    -- end
     deferred.state = state
 end
 

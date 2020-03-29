@@ -54,7 +54,7 @@ function NP.http.requestIndef( method, url, overrides )
     local d = promise.new()
     overrides = overrides or {}
 
-    local structData = {
+    local struct = {
         failed = function( err )
             d:reject( err, -1 )
         end,
@@ -63,13 +63,12 @@ function NP.http.requestIndef( method, url, overrides )
         end,
         method = method,
         url = url,
-        parameters = params,
+        parameters = overrides.params,
         type = "application/json",
         Token = overrides.authToken
     }
 
-    table.Merge( structData, overrides )
-    local struct = HTTPRequest( structData )
+    table.Merge( struct, overrides )
     HTTP( struct )
 
     return d
