@@ -99,7 +99,7 @@ function asyncCall( f )
     return async( f )()
 end
 
-AwaitErrorType = {
+AwaitTypes = {
     RETURN = 0,
     PROPAGATE = 1,
     MESSAGE_OVERRIDE = 2,
@@ -110,21 +110,21 @@ AwaitErrorType = {
 function await( p, awaitType, arg )
     assert( coroutine.running(), "Cannot use await outside of async function" )
 
-    awaitType = awaitType or AwaitErrorType.RETURN
+    awaitType = awaitType or AwaitTypes.RETURN
     local data = { coroutine.yield( p ) }
     local success = table.remove( data, 1 )
 
-    if awaitType == AwaitErrorType.RETURN then
+    if awaitType == AwaitTypes.RETURN then
         return success, unpack( data )
-    elseif awaitType == AwaitErrorType.PROPAGATE then
+    elseif awaitType == AwaitTypes.PROPAGATE then
         if not success then
             error( data[1] )
         end
         
         return unpack( data )
-    elseif awaitType == AwaitErrorType.MESSAGE_OVERRIDE then
+    elseif awaitType == AwaitTypes.MESSAGE_OVERRIDE then
         error( arg )
-    elseif awaitType == AwaitErrorType.HANDLER then
+    elseif awaitType == AwaitTypes.HANDLER then
         if not success then
             arg( unpack( data ) )
         end
