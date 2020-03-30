@@ -3,19 +3,22 @@ NP.http = {}
 -- Returns a promise that resolves after t seconds
 -- fail : Should the promise reject after timeout
 function NP.timeout( t, fail )
-    local d = promise.new()
-    local method = fail and d.reject or d.resolve
+    local prom = promise.new()
+    local method = fail and prom.reject or prom.resolve
+
     timer.Simple( t, function()
-        method( d, "Timeout" )
+        method( prom, "Timeout" )
     end )
-    return d
+    return prom
 end
 
-local function responseSuccess( d, body, status, headers )
-    if math.floor( status / 100 ) == 2 then
-        d:resolve( body, status, headers )
+local function responseSuccess( prom, body, status, headers )
+    local isSuccessStatus = math.floor( status / 100 ) == 2
+
+    if isSuccessStatus then
+        prom:resolve( body, status, headers )
     else
-        d:reject( body, status, headers )
+        prom:reject( body, status, headers )
     end
 end
 
@@ -24,24 +27,36 @@ end
 -- data   : post args as table
 -- resolves to function( data, statusCode, headers )
 function NP.http.postIndef( url, data )
-    local d = promise.new() -- promise itself
-    http.Post( url, data, function( body, len, headers, status )
-        responseSuccess( d, body, status, headers )
-    end, function( err )
-        d:reject( err, -1 )
-    end )
-    return d
+    local prom = promise.new() -- promise itself
+
+    local function onSuccess( body, len, headers, status )
+        responseSuccess( prom, body, status, headers )
+    end
+
+    local function onFailure( err )
+        prom:reject( err, -1 )
+    end
+
+    http.Post( url, data, onSuccess, onFailure )
+
+    return prom
 end
 
 -- Same as above but for fetch
 function NP.http.fetchIndef( url )
-    local d = promise.new()
-    http.Fetch( url, function( body, len, headers, status )
-        responseSuccess( d, body, status, headers )
-    end, function( err )
-        d:reject( err, -1 )
-    end )
-    return d
+    local prom = promise.new() -- promise itself
+
+    local function onSuccess( body, len, headers, status )
+        responseSuccess( prom, body, status, headers )
+    end
+
+    local function onFailure( err )
+        prom:reject( err, -1 )
+    end
+
+    http.Fetch( url, onSuccess, onFailure )
+
+    return prom
 end
 
 -- HTTP as a promise, resolves whenever http finishes, or never if it doesn't (Looking at you, ISteamHTTP)
@@ -51,15 +66,16 @@ end
 -- resolves to function( data, statusCode, headers )
 function NP.http.requestIndef( method, url, overrides )
     method = method or "GET"
-    local d = promise.new()
     overrides = overrides or {}
+
+    local prom = promise.new()
 
     local struct = {
         failed = function( err )
-            d:reject( err, -1 )
+            prom:reject( err, -1 )
         end,
         success = function( status, body, headers )
-            responseSuccess( d, body, status, headers )
+            responseSuccess( prom, body, status, headers )
         end,
         method = method,
         url = url,
@@ -71,7 +87,7 @@ function NP.http.requestIndef( method, url, overrides )
     table.Merge( struct, overrides )
     HTTP( struct )
 
-    return d
+    return prom
 end
 
 -- Post but with enforced timeout
@@ -82,6 +98,7 @@ end
 -- resolves to function( data, statusCode, headers )
 function NP.http.post( url, data, timeout )
     timeout = timeout or 5
+
     return promise.first{
         NP.http.postIndef( url, data ),
         NP.timeout( timeout, true )
@@ -91,6 +108,7 @@ end
 -- Same as above but for fetch
 function NP.http.fetch( url, timeout )
     timeout = timeout or 5
+
     return promise.first{
         NP.http.fetchIndef( url ),
         NP.timeout( timeout, true )
@@ -101,6 +119,7 @@ end
 function NP.http.request( method, url, overrides )
     overrides = overrides or {}
     local timeout = overrides.timeout or 5
+
     return promise.first{
         NP.http.requestIndef( method, url, overrides ),
         NP.timeout( timeout, true )
