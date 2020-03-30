@@ -99,44 +99,46 @@ function asyncCall( f )
     return async( f )()
 end
 
--- Wait for a promise to resolve in an async function
-function await( p )
-    assert( coroutine.running(), "Cannot use await outside of async function" )
-    return coroutine.yield( p )
-end
-
---[[
-
-Possible new await implementation??
-
-ERROR_RETURN = 0
-ERROR_PROPAGATE = 1
-ERROR_MESSAGE_OVERRIDE = 2
-ERROR_HANDLER = 3
+AwaitErrorType = {
+    RETURN = 0,
+    PROPAGATE = 1,
+    MESSAGE_OVERRIDE = 2,
+    HANDLER = 3,
+}
 
 -- Wait for a promise to resolve in an async function
 function await( p, awaitType, arg )
     assert( coroutine.running(), "Cannot use await outside of async function" )
 
-    awaitType = awaitType or ERROR_RETURN
+    awaitType = awaitType or AwaitErrorType.RETURN
     local data = { coroutine.yield( p ) }
     local success = table.remove( data, 1 )
 
-    if awaitType == ERROR_RETURN then
+    if awaitType == AwaitErrorType.RETURN then
         return success, unpack( data )
-    elseif awaitType == ERROR_PROPAGATE then
-        if success then
-            return unpack( data )
-        else
+    elseif awaitType == AwaitErrorType.PROPAGATE then
+        if not success then
             error( data[1] )
         end
-    elseif awaitType == ERROR_MESSAGE_OVERRIDE then
+        
+        return unpack( data )
+    elseif awaitType == AwaitErrorType.MESSAGE_OVERRIDE then
         error( arg )
-    elseif awaitType == ERROR_HANDLER then
+    elseif awaitType == AwaitErrorType.HANDLER then
         if not success then
             arg( unpack( data ) )
         end
+
         return success, unpack( data )
     end
+end
+
+--[[
+Old simpler await definition, in case we decide to change back.
+
+-- Wait for a promise to resolve in an async function
+function await( p )
+    assert( coroutine.running(), "Cannot use await outside of async function" )
+    return coroutine.yield( p )
 end
 ]]
