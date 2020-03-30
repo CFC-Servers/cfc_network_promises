@@ -120,7 +120,7 @@ function await( p, awaitType, arg )
         if not success then
             error( data[1] )
         end
-        
+
         return unpack( data )
     elseif awaitType == AwaitTypes.MESSAGE_OVERRIDE then
         error( arg )
