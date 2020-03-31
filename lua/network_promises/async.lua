@@ -95,8 +95,8 @@ function async( f )
 end
 
 -- Make a function async and call it
-function asyncCall( f )
-    return async( f )()
+function asyncCall( f, ... )
+    return async( f )( ... )
 end
 
 AwaitTypes = {

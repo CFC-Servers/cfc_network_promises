@@ -12,4 +12,5 @@ function addFiles( dir )
 end
 addFiles( "network_promises" )
 
+AddCSLuaFile( "includes/modules/cfc_promises.lua" )
 include( "network_promises/base.lua" )

@@ -34,6 +34,9 @@ local function finish( deferred, state )
                     errText = errText .. tostring( v ) .. "\n"
                 end
             end
+            if #errText > 500 then
+                errText = errText:sub( 1, 500 ) .. "..."
+            end
             error( "Uncaught rejection or exception in promise:\n" .. errText .. "IGNORE FOLLOWING 4 LINES" )
         end )
     end

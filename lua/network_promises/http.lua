@@ -81,10 +81,11 @@ function NP.http.requestIndef( method, url, overrides )
         url = url,
         parameters = overrides.params,
         type = "application/json",
-        Token = overrides.authToken
+        headers = {}
     }
 
     table.Merge( struct, overrides )
+    struct.headers.Authorization = overrides.authToken
     HTTP( struct )
 
     return prom
