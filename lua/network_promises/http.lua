@@ -86,6 +86,7 @@ function NP.http.requestIndef( method, url, overrides )
 
     table.Merge( struct, overrides )
     struct.headers.Authorization = overrides.authToken
+    
     HTTP( struct )
 
     return prom

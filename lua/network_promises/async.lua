@@ -3,7 +3,7 @@ Warning: This is a complex file!
 Make sure you are familiar with JavaScript style Promises before attempting to modify this.
 ]]
 
-local function isPromise( p )
+function isPromise( p )
     return type( p ) == "table" and p.next ~= nil
 end
 
@@ -21,6 +21,12 @@ end
 
 local function delayReject( prom, ... )
     delayPromise( prom, "reject", ... )
+end
+
+-- Table for checking yield was from await
+local awaitFlag = { awaitFlag = true }
+local function isAwaitFlag( v )
+    return tobool( type( v ) == "table" and v.awaitFlag )
 end
 
 --[[
@@ -64,13 +70,21 @@ promiseReturn = function( f, state, coInput, rootPromiseInput, debugInfoInput )
         local success = table.remove( ret, 1 )
 
         if success then
-            -- ret[1] will be a promise whenever await is called
-            if isPromise( ret[1] ) then
+            if isAwaitFlag( ret[1] ) then
                 -- If it's a promise, set that promise's reject and resolve to put it on the promise stack
+                local awaitPromise = ret[2]
+
                 local resolve = promiseReturn( f, true, co, rootPromise, debugInfo )
                 local reject = promiseReturn( f, false, co, rootPromise, debugInfo )
 
-                ret[1]:next( resolve, reject )
+                awaitPromise:next( resolve, reject )
+            elseif isPromise( ret[1] ) then
+                -- Return result was a promise, make it's reject and resolve forward to rootPromise
+                ret[1]:next( function( ... )
+                    rootPromise:resolve( ... )
+                end, function( ... )
+                    rootPromise:reject( ... )
+                end )
             else
                 -- If it's not a promise, this means the coroutine finished or the promise stack is empty ( from errors )
                 delayResolve( rootPromise, unpack( ret ) )
@@ -78,8 +92,12 @@ promiseReturn = function( f, state, coInput, rootPromiseInput, debugInfoInput )
         else
             -- There was a normal error in the coroutine, just reject with the error and location
             local err = ret[1]
-            local locationText = "\nContaining async function defined in " .. debugInfo.short_src .. " at line " .. debugInfo.linedefined .. "\n"
-            delayReject( rootPromise, err, locationText )
+            if type( err ) == "table" and err.reject then
+                delayReject( rootPromise, unpack( err.reject ) )
+            else
+                local locationText = "\nContaining async function defined in " .. debugInfo.short_src .. " at line " .. debugInfo.linedefined .. "\n"
+                delayReject( rootPromise, err, debug.traceback( co ), locationText )
+            end
         end
 
         -- We only return the rootPromise at root, else it will cause every "next" call above to be waiting on the rootPromise
@@ -110,20 +128,25 @@ AwaitTypes = {
 function await( p, awaitType, arg )
     assert( coroutine.running(), "Cannot use await outside of async function" )
 
+    if not isPromise( p ) then
+        -- If not a promise, it doesn't need to be waited for
+        return p
+    end
+
     awaitType = awaitType or AwaitTypes.RETURN
-    local data = { coroutine.yield( p ) }
+    local data = { coroutine.yield( awaitFlag, p ) }
     local success = table.remove( data, 1 )
 
     if awaitType == AwaitTypes.RETURN then
         return success, unpack( data )
     elseif awaitType == AwaitTypes.PROPAGATE then
         if not success then
-            error( data[1] )
+            reject( unpack( data ) )
         end
 
         return unpack( data )
     elseif awaitType == AwaitTypes.MESSAGE_OVERRIDE then
-        error( arg )
+        reject( arg )
     elseif awaitType == AwaitTypes.HANDLER then
         if not success then
             arg( unpack( data ) )
@@ -131,6 +154,30 @@ function await( p, awaitType, arg )
 
         return success, unpack( data )
     end
+end
+
+local function stringifyArgs( ... )
+    local out = {}
+    for k, v in pairs{ ... } do
+        if istable( v ) then
+            out[k] = table.ToString( v )
+        else
+            out[k] = tostring( v )
+        end
+    end
+    return table.concat( out, ", " )
+end
+
+function reject( ... )
+    if inAsync() then
+        error( { reject = { ... } } )
+    else
+        error( stringifyArgs( ... ) )
+    end
+end
+
+function inAsync()
+    return tobool( coroutine.running() )
 end
 
 --[[

@@ -25,20 +25,19 @@ local function finish( deferred, state )
         end
     end
     if state == REJECTED and #deferred.queue == 0 then
-        timer.Simple( 0, function()
-            local errText = ""
-            for k, v in ipairs( deferred.value ) do
-                if type( v ) == "table" then
-                    errText = errText .. table.ToString( v ) .. "\n"
-                else
-                    errText = errText .. tostring( v ) .. "\n"
-                end
+        local errText = ""
+        for k, v in ipairs( deferred.value ) do
+            if type( v ) == "table" then
+                errText = errText .. table.ToString( v ) .. "\n"
+            else
+                errText = errText .. tostring( v ) .. "\n"
             end
-            if #errText > 500 then
-                errText = errText:sub( 1, 500 ) .. "..."
-            end
-            error( "Uncaught rejection or exception in promise:\n" .. errText .. "IGNORE FOLLOWING 4 LINES" )
-        end )
+        end
+        if #errText > 1000 then
+            errText = errText:sub( 1, 1000 ) .. "...\n"
+        end
+        ErrorNoHalt( "Uncaught rejection or exception in promise:\n" .. errText )
+        print("hi")
     end
     deferred.state = state
 end
@@ -58,12 +57,25 @@ local function promise( deferred, next, success, failure, nonpromisecb )
             failure()
         end )
         if not ok and not called then
-            deferred.value = { err, stack }
+            deferred.value = handleError( deferred, { err, stack } )
             failure()
         end
     else
         nonpromisecb()
     end
+end
+
+local function handleError( deferred, values )
+    print("handle this shit")
+    local first = values[1]
+    if type( first ) == "table" and first.reject then
+        return unpack( first.reject )
+    end
+
+    table.insert( values, "\nContaining next defined in " .. deferred.successInfo.short_src ..
+        " at line " .. deferred.successInfo.linedefined .. "\n" )
+
+    return values
 end
 
 local function fire( deferred )
@@ -79,32 +91,30 @@ local function fire( deferred )
         fire( deferred )
     end, function()
         local ok
-        local v
+        local value
         if deferred.state == RESOLVING and isfunction( deferred.success ) then
             local ret = { xdcall( deferred.success, unpack( deferred.value ) ) }
             ok = table.remove( ret, 1 )
-            v = ret
+            value = ret
             if not ok then
-                table.insert( ret, "\nContaining next defined in " .. deferred.successInfo.short_src ..
-                    " at line " .. deferred.successInfo.linedefined .. "\n" )
+                value = handleError( deferred, value )
             end
         elseif deferred.state == REJECTING  and isfunction( deferred.failure ) then
             local ret = { xdcall( deferred.failure, unpack( deferred.value ) ) }
             ok = table.remove( ret, 1 )
-            v = ret
+            value = ret
             if ok then
                 deferred.state = RESOLVING
             else
-                table.insert( ret, "\nContaining next defined in " .. deferred.failureInfo.short_src ..
-                    " at line " .. deferred.failureInfo.linedefined .. "\n" )
+                value = handleError( deferred, value )
             end
         end
 
         if ok ~= nil then
             if ok then
-                deferred.value = v
+                deferred.value = value
             else
-                deferred.value = v
+                deferred.value = value
                 return finish( deferred )
             end
         end
