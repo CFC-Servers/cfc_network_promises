@@ -37,7 +37,6 @@ local function finish( deferred, state )
             errText = errText:sub( 1, 1000 ) .. "...\n"
         end
         ErrorNoHalt( "Uncaught rejection or exception in promise:\n" .. errText )
-        print("hi")
     end
     deferred.state = state
 end
