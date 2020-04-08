@@ -18,15 +18,3 @@ function xdcall( func, ... )
 
     return false, traceback
 end
-
--- Hatling error with the little popup, but no traceback
-function errorNoTrace( err )
-    local mt = {
-        __tostring = function( self )
-            return err
-        end 
-    }
-    local errObj = setmetatable( {}, mt )
-
-    error( errObj )
-end
