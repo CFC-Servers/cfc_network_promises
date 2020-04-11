@@ -86,6 +86,9 @@ function NP.http.requestIndef( method, url, overrides )
 
     table.Merge( struct, overrides )
     struct.headers.Authorization = overrides.authToken
+    if struct.parameters then
+        struct.body = util.TableToJSON( struct.parameters )
+    end
     
     HTTP( struct )
 
