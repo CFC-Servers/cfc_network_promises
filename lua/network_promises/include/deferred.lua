@@ -65,7 +65,6 @@ local function promise( deferred, next, success, failure, nonpromisecb )
 end
 
 local function handleError( deferred, values )
-    print("handle this shit")
     local first = values[1]
     if type( first ) == "table" and first.reject then
         return unpack( first.reject )

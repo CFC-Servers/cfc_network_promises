@@ -61,7 +61,7 @@ end
 
 -- HTTP as a promise, resolves whenever http finishes, or never if it doesn't (Looking at you, ISteamHTTP)
 -- method    : GET, PUT, etc.
--- url       : 
+-- url       :
 -- overrides : Table to be merged with the http struct (includes authToken as Token alias)
 -- resolves to function( data, statusCode, headers )
 function NP.http.requestIndef( method, url, overrides )
@@ -89,7 +89,7 @@ function NP.http.requestIndef( method, url, overrides )
     if struct.parameters then
         struct.body = util.TableToJSON( struct.parameters )
     end
-    
+
     HTTP( struct )
 
     return prom
