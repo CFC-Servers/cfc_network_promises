@@ -133,7 +133,7 @@ function await( p, awaitType, arg )
         return p
     end
 
-    awaitType = awaitType or AwaitTypes.PROPAGATE
+    awaitType = awaitType or AwaitTypes.RETURN
     local data = { coroutine.yield( awaitFlag, p ) }
     local success = table.remove( data, 1 )
 
