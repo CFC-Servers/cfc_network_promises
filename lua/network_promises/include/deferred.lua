@@ -41,6 +41,18 @@ local function finish( deferred, state )
     deferred.state = state
 end
 
+local function handleError( deferred, values )
+    local first = values[1]
+    if type( first ) == "table" and first.reject then
+        return unpack( first.reject )
+    end
+
+    table.insert( values, "\nContaining next defined in " .. deferred.successInfo.short_src ..
+        " at line " .. deferred.successInfo.linedefined .. "\n" )
+
+    return values
+end
+
 local function promise( deferred, next, success, failure, nonpromisecb )
     if type( deferred ) == "table" and type( deferred.value[1] ) == "table" and isfunction( next ) then
         local called = false
@@ -62,18 +74,6 @@ local function promise( deferred, next, success, failure, nonpromisecb )
     else
         nonpromisecb()
     end
-end
-
-local function handleError( deferred, values )
-    local first = values[1]
-    if type( first ) == "table" and first.reject then
-        return unpack( first.reject )
-    end
-
-    table.insert( values, "\nContaining next defined in " .. deferred.successInfo.short_src ..
-        " at line " .. deferred.successInfo.linedefined .. "\n" )
-
-    return values
 end
 
 local function fire( deferred )
