@@ -1,4 +1,5 @@
 require( "cfc_detached_timer" )
+
 local deferred = include( "network_promises/include/deferred.lua" )
 promise = deferred -- Create global promise variable for other scripts
 
@@ -19,6 +20,6 @@ function NP.timeout( t, fail )
     dTimer.Simple( t, function()
         method( prom, "Timeout" )
     end )
+
     return prom
 end
-
