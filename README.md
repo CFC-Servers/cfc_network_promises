@@ -2,6 +2,9 @@
 # cfc_network_promises
 Network-based promise library
 
+## Requirements
+- [cfc_detached_timer](https://github.com/CFC-Servers/cfc_detached_timer)
+
 ## Async + Await
 This project implements a C#/javascript style async and await functionality.  
 Similarly to Javascript, this is built on top of promises.  
