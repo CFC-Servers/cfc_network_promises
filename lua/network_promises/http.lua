@@ -1,17 +1,5 @@
 NP.http = {}
 
--- Returns a promise that resolves after t seconds
--- fail : Should the promise reject after timeout
-function NP.timeout( t, fail )
-    local prom = promise.new()
-    local method = fail and prom.reject or prom.resolve
-
-    timer.Simple( t, function()
-        method( prom, "Timeout" )
-    end )
-    return prom
-end
-
 local function responseSuccess( prom, body, status, headers )
     local isSuccessStatus = math.floor( status / 100 ) == 2
 

@@ -10,7 +10,7 @@ end
 -- Delay to escape any enclosing pcalls
 local function delayPromise( prom, method, ... )
     local data = { ... }
-    timer.Simple( 0, function()
+    dTimer.Simple( 0, function()
         prom[method]( prom, unpack( data ) )
     end )
 end
