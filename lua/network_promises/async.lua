@@ -57,6 +57,10 @@ promiseReturn = function( f, state, coInput, rootPromiseInput, debugInfoInput )
             co = coroutine.create( f )
             -- Get information on where the function is for error reporting
             debugInfo = debug.getinfo( f, "S" )
+        else
+            if rootPromise.state ~= 0 then -- 0 is PENDING
+                return
+            end
         end
 
         -- Don't pass in state for root, arguments to async function should be sent perfectly to it's internal function
