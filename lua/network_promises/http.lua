@@ -17,7 +17,7 @@ end
 function NP.http.postIndef( url, data )
     local prom = promise.new() -- promise itself
 
-    local function onSuccess( body, len, headers, status )
+    local function onSuccess( body, _, headers, status )
         responseSuccess( prom, body, status, headers )
     end
 
@@ -34,7 +34,7 @@ end
 function NP.http.fetchIndef( url )
     local prom = promise.new() -- promise itself
 
-    local function onSuccess( body, len, headers, status )
+    local function onSuccess( body, _, headers, status )
         responseSuccess( prom, body, status, headers )
     end
 
