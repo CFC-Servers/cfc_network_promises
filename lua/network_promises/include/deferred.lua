@@ -17,7 +17,7 @@ local REJECTED = 4
 
 local function finish( deferred, state )
     state = state or REJECTED
-    for i, f in ipairs( deferred.queue ) do
+    for _, f in ipairs( deferred.queue ) do
         if state == RESOLVED then
             f:resolve( unpack( deferred.value ) )
         else
@@ -26,7 +26,7 @@ local function finish( deferred, state )
     end
     if state == REJECTED and #deferred.queue == 0 then
         local errText = ""
-        for k, v in ipairs( deferred.value ) do
+        for _, v in ipairs( deferred.value ) do
             if type( v ) == "table" then
                 errText = errText .. table.ToString( v ) .. "\n"
             else
@@ -199,7 +199,7 @@ function M.new( options )
     options = options or {}
     local d
     d = {
-        next = function( self, success, failure )
+        next = function( _, success, failure )
             local next = M.new( { success = success, failure = failure, extend = options.extend } )
             if d.state == RESOLVED then
                 next:resolve( unpack( d.value ) )

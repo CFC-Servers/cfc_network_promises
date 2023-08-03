@@ -23,7 +23,7 @@ function NP.net.send( name, ... )
     -- Incase a message is sent multiple times before a reply
     -- Store it to a table so the correct response matches the correct promise
     netSends[netSendId] = d
-    net.Receive( name, function( len, ply )
+    net.Receive( name, function()
         local id = net.ReadInt( 16 )
         local success = net.ReadBool()
         local p = netSends[id]
@@ -59,7 +59,7 @@ end
 -- func : function( player, netArg1, netArg2 )
 function NP.net.receive( name, func )
     ensureNetworkString( name )
-    net.Receive( name, function( len, ply )
+    net.Receive( name, function( _, ply )
         local id = net.ReadInt( 16 )
         local data = net.ReadTable()
         local ret = { func( ply, unpack( data ) ) }
